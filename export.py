@@ -107,10 +107,6 @@ def bw_unlock(master_password):
         output = unlock_process.stdout.decode("utf-8")
         error_output = unlock_process.stderr.decode("utf-8")
 
-        # Print the full stdout and stderr responses from bw unlock
-        print(f"🔧 CLI Output: {output}")
-        print(f"⚠️ CLI Error Output (if any): {error_output}")
-
         # Search for session key in the output by extracting the part between quotes after BW_SESSION=
         session_key = None
         if 'export BW_SESSION=' in output:
@@ -150,9 +146,6 @@ if __name__ == "__main__":
     client_id = get_secret_by_uuid(secrets_client, client_id_uuid)
     client_secret = get_secret_by_uuid(secrets_client, client_secret_uuid)
     master_password = get_secret_by_uuid(secrets_client, master_password_uuid)
-
-    # Debugging: Check if secrets are retrieved correctly
-    print(f"Master Password: {master_password}")
 
     if not client_id or not client_secret or not master_password:
         print("❌ Missing required secrets. Exiting.")
