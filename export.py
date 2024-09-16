@@ -17,8 +17,10 @@ client_id_uuid = os.getenv("CLIENT_ID_UUID")
 client_secret_uuid = os.getenv("CLIENT_SECRET_UUID")
 master_password_uuid = os.getenv("MASTER_PASSWORD_UUID")
 
-# Output path for the vault export
+# Export settings
 output_file = os.getenv("OUTPUT_FILE")
+export_format = os.getenv("EXPORT_FORMAT", "json")  # Default to "json" if not set
+export_password = os.getenv("EXPORT_PASSWORD")  # Password for encrypted exports (if any)
 
 # Authenticate with Bitwarden Secrets Manager using access token
 def authenticate_secrets_manager():
@@ -107,6 +109,10 @@ def bw_unlock(master_password):
         output = unlock_process.stdout.decode("utf-8")
         error_output = unlock_process.stderr.decode("utf-8")
 
+        # Print the full stdout and stderr responses from bw unlock
+        print(f"🔧 CLI Output: {output}")
+        print(f"⚠️ CLI Error Output (if any): {error_output}")
+
         # Search for session key in the output by extracting the part between quotes after BW_SESSION=
         session_key = None
         if 'export BW_SESSION=' in output:
@@ -127,15 +133,34 @@ def bw_unlock(master_password):
 def export_vault(session_key):
     try:
         bw_path = os.getenv("BW_PATH", "bw")  # Default to "bw" if BW_PATH is not found
+        is_organization = os.getenv("IS_ORGANIZATION", "false").lower() == "true"
+        organization_id = os.getenv("ORGANIZATION_ID") if is_organization else None
 
         print(f"🚀 Exporting vault to {output_file}...")
-        # Run the export command with the session key explicitly passed
-        subprocess.run([bw_path, "export", "--format", "json", "--output", output_file, "--session", session_key], check=True)
+
+        # Prepare the command with format and session key
+        export_command = [
+            bw_path, "export", 
+            "--format", export_format, 
+            "--output", output_file, 
+            "--session", session_key
+        ]
+
+        # Add password flag if the export format is "encrypted_json" and an export password is provided
+        if export_format == "encrypted_json" and export_password:
+            export_command.extend(["--password", export_password])
+
+        # Add organization ID if exporting an organizational vault
+        if is_organization and organization_id:
+            export_command.extend(["--organizationid", organization_id])
+
+        # Run the export command
+        subprocess.run(export_command, check=True)
         print(f"✅ Vault exported successfully to {output_file} 🎉")
     except subprocess.CalledProcessError as e:
         print(f"❌ Error exporting vault: {e}")
         exit(1)
-
+        
 if __name__ == "__main__":
     print("🚀 Starting Bitwarden Vault Export Script...")
 
